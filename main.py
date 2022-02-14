@@ -1,7 +1,8 @@
+alive = True
 currentRoom = 1
 caveMap = { 
   1: [2 ],
-  2: [10, 4, 6 ],
+  2: [10, 4, 6],
   3: [2, 5, 9 ],
   4: [6, 5],
   5: [3, 7, 8 ],
@@ -9,16 +10,31 @@ caveMap = {
   7: [9 ],
   8: [7, 5],
   9: [3, 10 ], 
-  10: [11 ],
-  11: [9, 12 ],
-  12: [1 ],
+  10: [11, ],
+  11: [9, 12, ],
+  12: []
   }
+
+def niceExitList (roomExits):
+  global alive
+  if len(roomExits) == 0:
+    alive = False
+    return "You are trapped! This room has no exits, you have starved."
+  if len(roomExits) == 1:
+    return f"This room's only exit is to room {roomExits[0]}"
+  if len(roomExits) == 2:
+    return f"This room has exits to rooms {roomExits[0]} and {roomExits[1]}."
+
+  niceList= "This room has exits to rooms: "
+  for exitNum in range(len(roomExits)-1):
+   niceList += f"{roomExits[exitNum]}, "
+  niceList += f"and {roomExits [-1]}."
+
+  return niceList
 
 def look():
   print(f"You are in room {currentRoom}")
-  if len(caveMap[currentRoom]) == 0:
-    print("You are trapped! This room has no exits.")
-  print(f"Exits lead to room: {caveMap[currentRoom]}")
+  print(niceExitList(caveMap[currentRoom]))
 
 def move() :
   global currentRoom
@@ -33,8 +49,10 @@ def move() :
 
 print("The Legend Of Greta")
 print()
-while True:
+while alive:
   look()
+  if not alive:
+    break
   nextAction = input("\nWhat's next?").lower()[0]
   if nextAction.lower()[0] == "m":
     move()
