@@ -11,18 +11,21 @@ gameState = {
   "wumpusState": WumpusState.ASLEEP, 
   "currentRoom" : 1,
   "wumpusRoom" : 1,
-  "caveMap" : {
+  "startleChance" : .60,
+  "sleepChance": .33,
+  "arrows": 4, 
+  "caveMap" : { 
     1: [2 ],
     2: [4, 6, 10],
     3: [2, 5, 9 ],
-    4: [5, 6],
+    4: [1, 5, 6],
     5: [3, 7, 8 ],
     6: [12 ],
     7: [9 ],
     8: [5, 7],
     9: [3, 10 ], 
     10: [11, ],
-    11: [9, 12, ],
+    11: [1, 9, 12, ],
     12: []
   }
 }
@@ -49,6 +52,14 @@ def newGame(state) :
     state["wumpusRoom"] = safeRandomRoom(state)
     state["currentRoom"] = safeRandomRoom(state)
 
+def niceArrowList(numArrows):
+  if numArrows == 0:
+    return "You're out of arrows!"
+  if numArrows == 1:
+    return "You're down to your last arrow!"
+  return f"You have {numArrows} arrows in your quiver."
+
+
 def niceExitList (state):
   currentRoom = state["currentRoom"]
   roomExits = state["caveMap"][currentRoom]
@@ -67,14 +78,18 @@ def niceExitList (state):
 
   return niceList
 
-def look(state):
+def sense(state):
   currentRoom = state["currentRoom"]
   print(f"You are in room {currentRoom}")
+  print(niceArrowList(state["arrows"]))
   if currentRoom == state["wumpusRoom"] :
     if state["wumpusState"] == WumpusState.ASLEEP: 
-      print("You stumble upon a sleeping wumpus.")
+      print("You stumble upon Greta taking a nap.")
     else: 
       print("The wumpus stares back at you.")
+  for exitNumber in state["caveMap"][state["currentRoom"]]:
+    if state["wumpusRoom"] == exitNumber:
+      print("The smell of Greta fills your nostrils.")  
   print(niceExitList(state))
 
 def move(state) :
@@ -84,24 +99,40 @@ def move(state) :
     print(f"I'm sorry, you cannot get to room {nextRoom} from here.")
     return
   if nextRoom not in state["caveMap"]:
-   print(f"Uh oh! Room {nextRoom} doesn't exist")
-   return
+    print(f"Uh oh! Room {nextRoom} doesn't exist")
+    return
   state["currentRoom"] = nextRoom
 
 def encounter(state) :
-  if state["currentRoom"] == state["wumpusRoom"] :
-    if state["wumpusState"] == WumpusState.ASLEEP:
-      print("You have awoken the wumpus!")
-      state["wumpusState"] == WumpusState.AWAKE 
-    else: 
-      print("Nom nom nom. You have been eaten by the wumpus!")
+  if state["currentRoom"] == state["wumpusRoom"] and state["wumpusState"] == WumpusState.ASLEEP:
+      print("You have awoken Greta!")
+      state["wumpusState"] = WumpusState.AWAKE 
+      if (random.random() < state["startleChance"]):
+        roomExits = state["caveMap"][state["currentRoom"]]
+        if len(roomExits) == 0:
+          print("You have startled Greta, but this room has no exits!")
+        else:
+          print("Lucky for you, you scared Greta and she has run out.")
+          state["wumpusRoom"] = random.choice(roomExits)
+  if state["currentRoom"] == state["wumpusRoom"] and state["wumpusState"] == WumpusState.AWAKE: 
+      print("*Crunch* Oh no! You have been eaten by Greta!")
       state["alive"] = False
+
+def updateHarzards(state) :
+  if state["wumpusState"] == WumpusState.AWAKE: 
+    roomExits = state["caveMap"][state["currentRoom"]]
+    if random.random() < state["sleepChance"]:
+      print("Hint: The wumpus has fallen asleep.")
+      state["wumpusState"] = WumpusState.ASLEEP
+    elif len(roomExits) > 0:
+     state["wumpusRoom"] = random.choice(roomExits)
 
 newGame(gameState)
 print("The Legend Of Greta")
 print("Hint: The wumpus is in room {wumpusRoom}".format_map(gameState))
 while gameState ["alive"]:
-  look(gameState)
+  sense(gameState)
+  encounter(gameState)
   if not gameState["alive"]:
     break
   nextAction = input("\nWhat's next?").lower()[0]
