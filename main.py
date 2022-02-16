@@ -14,6 +14,8 @@ gameState = {
   "startleChance" : .60,
   "sleepChance": .33,
   "arrows": 4, 
+  "numberOfPits": 2,
+  "pits": [],
   "caveMap" : { 
     1: [2 ],
     2: [4, 6, 10],
@@ -40,6 +42,8 @@ def safeRandomRoom(state) :
   while True:
     room = random.randint(1,numOfRooms(state))
     roomExits = state["caveMap"] [room]
+    if room in state["pits"]:
+      continue
     if len(roomExits) > 0:
       break
   return room
@@ -48,7 +52,9 @@ def newGame(state) :
   if numOfRooms(state) < 2:
     print("A game that only has one room is not supported.")
     raise SystemExit
-  while state ["wumpusRoom"] == state["currentRoom"]:
+  for pitNum in range(state["numberOfPits"]):
+     state["pits"].append(safeRandomRoom)
+   while state ["wumpusRoom"] == state["currentRoom"]:
     state["wumpusRoom"] = safeRandomRoom(state)
     state["currentRoom"] = safeRandomRoom(state)
 
@@ -103,6 +109,49 @@ def move(state) :
     return
   state["currentRoom"] = nextRoom
 
+def shoot(state): 
+  if state["arrows"] == 0:
+      # see if they have arrows
+      print("You do not have any arrows left.")
+      return
+      # what room do they want to shoot into
+  targetRoom = int(input("What room would you like to shoot into?"))
+  roomExits = state["caveMap"][state["currentRoom"]]
+  # see if room is avalible to shoot into
+  if targetRoom not in roomExits:
+      print("Sorry! You cannot shoot into that room from here.")
+      return
+  # how far should the arrow travel
+  distance = int(input("How many rooms would you like your arrow to travel through"))
+  # remove arrow from quiver
+  state["arrows"] -= 1
+  # tell them they shot
+  print(f"Your arrow flies through the air into {targetRoom}")
+  # flight of arrow
+  while distance > 0:
+      # see if arrow hit hunter
+      if targetRoom == state["currentRoom"]:
+          print("Ouch! You have shot yourself!")
+          state["alive"] = False
+          break
+      # see if you have hit the wumpus
+      if targetRoom == state["wumpusRoom"]: 
+          print("Wow! You have shot Greta! Congrats!")
+          state["wumpusState"] = WumpusState.DEAD
+          break
+      # see if arrow goes farther
+      distance -= 1
+      if distance == 0:
+          print("Your arrow snaps against the ground.")
+          break
+      # see if room has no exits
+      arrowExits = state["caveMap"][targetRoom]
+      if len(arrowExits) == 0:
+          print("Your arrow breaks against the wall")
+          break
+      # move arrow to new room
+      targetRoom = random.choice(arrowExits)
+
 def encounter(state) :
   if state["currentRoom"] == state["wumpusRoom"] and state["wumpusState"] == WumpusState.ASLEEP:
       print("You have awoken Greta!")
@@ -130,12 +179,15 @@ def updateHarzards(state) :
 newGame(gameState)
 print("The Legend Of Greta")
 print("Hint: The wumpus is in room {wumpusRoom}".format_map(gameState))
-while gameState ["alive"]:
+while gameState ["alive"] and gameState["wumpusState"] != WumpusState.DEAD:
   sense(gameState)
   encounter(gameState)
   if not gameState["alive"]:
     break
   nextAction = input("\nWhat's next?").lower()[0]
+  if nextAction.lower()[0] == "s":
+    shoot(gameState)
+    continue
   if nextAction.lower()[0] == "m":
     move(gameState)
     continue
